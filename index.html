@@ -548,76 +548,64 @@
         }
 
         async function sendMessage() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if (!text) return;
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
 
-            const messagesContainer = document.getElementById('chat-messages');
-            
-            // 1. Add User Message
-            const userBubble = document.createElement('div');
-            userBubble.className = 'message user-msg';
-            userBubble.textContent = text;
-            messagesContainer.appendChild(userBubble);
-            
-            input.value = '';
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    const messagesContainer = document.getElementById('chat-messages');
+    
+    // 1. แสดงข้อความฝั่ง User
+    const userBubble = document.createElement('div');
+    userBubble.className = 'message user-msg';
+    userBubble.textContent = text;
+    messagesContainer.appendChild(userBubble);
+    
+    input.value = '';
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-            // 2. Add "Thinking" Indicator
-            const thinkingBubble = document.createElement('div');
-            thinkingBubble.className = 'message bot-msg thinking';
-            thinkingBubble.textContent = 'Thinking...';
-            thinkingBubble.id = 'thinking-indicator';
-            messagesContainer.appendChild(thinkingBubble);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    // 2. แสดงสถานะกำลังคิด
+    const thinkingBubble = document.createElement('div');
+    thinkingBubble.className = 'message bot-msg thinking';
+    thinkingBubble.textContent = 'AI กำลังประมวลผล...';
+    thinkingBubble.id = 'thinking-indicator';
+    messagesContainer.appendChild(thinkingBubble);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-            try {
-                // 3. Call API
-                const response = await fetch('https://urinant-restlessly-verdell.ngrok-free.dev/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'ngrok-skip-browser-warning': 'true' // Required for ngrok free tier
-                    },
-                    body: JSON.stringify({ "user_input": text })
-                });
+    try {
+        // 3. เรียก API (เช็ค URL จาก ngrok ให้เป็นตัวล่าสุดเสมอ!)
+        const response = await fetch('https://urinant-restlessly-verdell.ngrok-free.dev/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            // ต้องใช้ชื่อ "user_input" ให้ตรงกับใน Colab
+            body: JSON.stringify({ "user_input": text }) 
+        });
 
-                // 4. Remove Thinking Indicator
-                document.getElementById('thinking-indicator')?.remove();
+        document.getElementById('thinking-indicator')?.remove();
 
-                if (!response.ok) {
-                    throw new Error(`Network response was not ok: ${response.statusText}`);
-                }
+        if (!response.ok) throw new Error('Server Error');
 
-                const data = await response.json();
-                
-                // 5. Handle Response (Check for common property names)
-                let botResponse = "I'm here to help!";
-                if (data.reply) botResponse = data.reply;
-                else if (data.response) botResponse = data.response;
-                else if (data.message) botResponse = data.message;
-                else if (typeof data === 'string') botResponse = data;
-                else botResponse = JSON.stringify(data);
+        const data = await response.json();
+        
+        // 4. แสดงคำตอบจาก AI
+        const botBubble = document.createElement('div');
+        botBubble.className = 'message bot-msg';
+        botBubble.textContent = data.reply || data.response; // ดึงค่า reply มาแสดง
+        messagesContainer.appendChild(botBubble);
 
-                const botBubble = document.createElement('div');
-                botBubble.className = 'message bot-msg';
-                botBubble.textContent = botResponse;
-                messagesContainer.appendChild(botBubble);
+    } catch (error) {
+        console.error('Chat Error:', error);
+        document.getElementById('thinking-indicator')?.remove();
+        const errorBubble = document.createElement('div');
+        errorBubble.className = 'message bot-msg';
+        errorBubble.style.background = '#fdecea';
+        errorBubble.textContent = "ขออภัยครับ เชื่อมต่อกับ AI ไม่ได้ กรุณาลองใหม่";
+        messagesContainer.appendChild(errorBubble);
+    }
 
-            } catch (error) {
-                console.error('Chat Error:', error);
-                document.getElementById('thinking-indicator')?.remove();
-                
-                const errorBubble = document.createElement('div');
-                errorBubble.className = 'message bot-msg';
-                errorBubble.style.background = '#fdecea';
-                errorBubble.style.color = '#8b2c2c';
-                errorBubble.textContent = "Sorry, I'm having trouble connecting to the server. Please try again later.";
-                messagesContainer.appendChild(errorBubble);
-            }
-
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
 
         function handleChatKey(e) {
             if (e.key === 'Enter') sendMessage();
